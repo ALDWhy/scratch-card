@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>刮刮乐</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #e6f7ff; 
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: #1890ff;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .scratch-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            max-width: 500px;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        
+        .scratch-card {
+            aspect-ratio: 1/1;
+            background: #f8ecc9; 
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #e8d9a9;
+        }
+        
+        .scratch-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            background: #f5e5b5; 
+        }
+        
+        .scratch-card.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .scratch-card.scratched {
+            animation: fadeOut 1.5s forwards;
+        }
+        
+        @keyframes fadeOut {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+        }
+        
+        .refresh-btn {
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.2rem;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .refresh-btn:hover {
+            background-color: #40a9ff;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .reward-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .reward-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .reward-content {
+            background: linear-gradient(135deg, #f8ecc9, #e8d9a9);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 80%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+            border: 2px solid #d4c189;
+        }
+        
+        .reward-modal.active .reward-content {
+            transform: scale(1);
+        }
+        
+        .reward-content h2 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        
+        .reward-content p {
+            font-size: 1.5rem;
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .reward-content .close-btn {
+            background-color: #1890ff;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .reward-content .close-btn:hover {
+            background-color: #40a9ff;
+            transform: translateY(-2px);
+        }
+        
+        @media (max-width: 600px) {
+            .scratch-container {
+                gap: 10px;
+            }
+            
+            .scratch-card {
+                font-size: 1.5rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>刘冰远的专属刮刮乐</h1>
+        <p>选择你心仪的卡片，看看有什么惊喜？</p>
+    </div>
+    
+    <div class="scratch-container" id="scratchContainer">
+        
+    </div>
+    
+    <button class="refresh-btn" id="refreshBtn">刷新卡片</button>
+    
+    <div class="reward-modal" id="rewardModal">
+        <div class="reward-content">
+            <!--<h2>恭喜你！</h2>-->
+            <p id="rewardText">奖励内容</p>
+            <button class="close-btn" id="closeModal">关闭</button>
+        </div>
+    </div>
+
+    <script>
+        // 奖励列表
+        const rewards = [
+            "兑换一个亲亲",
+            "谢谢参与",
+            "奖励一拳头",
+            "给你讲个故事",
+            "犒劳",
+            "中大奖辣（保持神秘）",
+            "实现你的愿望",
+            "今天你当我老大",
+            "让我摸摸（没错，奖励哈啦月）"
+        ];
+        
+        const scratchContainer = document.getElementById('scratchContainer');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const rewardModal = document.getElementById('rewardModal');
+        const rewardText = document.getElementById('rewardText');
+        const closeModal = document.getElementById('closeModal');
+        
+        let isScratched = false;
+        let currentRewards = [];
+        
+        // 初始化游戏
+        function initGame() {
+            scratchContainer.innerHTML = '';
+            isScratched = false;
+            
+            // 随机分配奖励
+            currentRewards = [...rewards];
+            shuffleArray(currentRewards);
+            
+            // 创建1-9的刮刮乐卡片
+            for (let i = 1; i <= 9; i++) {
+                const card = document.createElement('div');
+                card.className = 'scratch-card';
+                card.textContent = i;
+                card.dataset.index = i - 1;
+                
+                card.addEventListener('click', handleCardClick);
+                
+                scratchContainer.appendChild(card);
+            }
+        }
+        
+        // 处理卡片点击
+        function handleCardClick(e) {
+            if (isScratched) return;
+            
+            isScratched = true;
+            const card = e.currentTarget;
+            const index = parseInt(card.dataset.index);
+            
+            // 禁用所有卡片
+            document.querySelectorAll('.scratch-card').forEach(c => {
+                if (c !== card) {
+                    c.classList.add('disabled');
+                }
+            });
+            
+            // 添加刮开动画
+            card.classList.add('scratched');
+            
+            // 显示奖励
+            setTimeout(() => {
+                rewardText.textContent = currentRewards[index];
+                rewardModal.classList.add('active');
+            }, 1500);
+        }
+        
+        // 刷新按钮点击事件
+        refreshBtn.addEventListener('click', initGame);
+        
+        // 关闭奖励弹窗
+        closeModal.addEventListener('click', () => {
+            rewardModal.classList.remove('active');
+        });
+        
+        // 点击空白区域关闭弹窗
+        rewardModal.addEventListener('click', (e) => {
+            if (e.target === rewardModal) {
+                rewardModal.classList.remove('active');
+            }
+        });
+        
+        // 数组随机排序函数
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        // 初始化游戏
+        initGame();
+    </script>
+</body>
+</html>
